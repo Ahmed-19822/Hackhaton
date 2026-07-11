@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
 import { useAuth } from './context/AuthContext.jsx'
 
 import Login from './pages/Login.jsx'
@@ -14,36 +15,39 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 export default function App() {
   const { session, loading } = useAuth()
+  const location = useLocation()
 
   return (
-    <Routes>
-      {/* Root redirects based on auth state */}
-      <Route
-        path="/"
-        element={
-          loading ? (
-            <div className="p-8 text-sm text-steel-500">Loading…</div>
-          ) : (
-            <Navigate to={session ? '/dashboard' : '/login'} replace />
-          )
-        }
-      />
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        {/* Root redirects based on auth state */}
+        <Route
+          path="/"
+          element={
+            loading ? (
+              <div className="p-8 text-sm text-steel-500">Loading…</div>
+            ) : (
+              <Navigate to={session ? '/dashboard' : '/login'} replace />
+            )
+          }
+        />
 
-      {/* Public routes — reachable via QR scan, no login required */}
-      <Route path="/asset/:code" element={<PublicAsset />} />
-      <Route path="/report/:code" element={<ReportIssue />} />
+        {/* Public routes — reachable via QR scan, no login required */}
+        <Route path="/asset/:code" element={<PublicAsset />} />
+        <Route path="/report/:code" element={<ReportIssue />} />
 
-      {/* Auth routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
+        {/* Auth routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
 
-      {/* Internal (staff-only) routes */}
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/assets" element={<ProtectedRoute><Assets /></ProtectedRoute>} />
-      <Route path="/assets/:id" element={<ProtectedRoute><AssetDetails /></ProtectedRoute>} />
-      <Route path="/issues/:id" element={<ProtectedRoute><IssueDetails /></ProtectedRoute>} />
+        {/* Internal (staff-only) routes */}
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/assets" element={<ProtectedRoute><Assets /></ProtectedRoute>} />
+        <Route path="/assets/:id" element={<ProtectedRoute><AssetDetails /></ProtectedRoute>} />
+        <Route path="/issues/:id" element={<ProtectedRoute><IssueDetails /></ProtectedRoute>} />
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AnimatePresence>
   )
 }

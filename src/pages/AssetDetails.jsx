@@ -6,12 +6,15 @@ import Navbar from '../components/Navbar.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
 import PriorityBadge from '../components/PriorityBadge.jsx'
 import QRBlock from '../components/QRBlock.jsx'
+import PageWrapper from '../components/PageWrapper.jsx'
+import { motion } from 'framer-motion'
 
 const STATUSES = ['Operational', 'Issue Reported', 'Under Inspection', 'Under Maintenance', 'Out of Service', 'Retired']
+const CONDITIONS = ['Excellent', 'Good', 'Fair', 'Poor', 'Needs Repair', 'Fixed', 'Damaged']
 
 export default function AssetDetails() {
   const { id } = useParams()
-  const { isAdmin, user } = useAuth()
+  const { isAdmin, user, profile } = useAuth()
 
   const [asset, setAsset] = useState(null)
   const [issues, setIssues] = useState([])
@@ -20,6 +23,8 @@ export default function AssetDetails() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(null)
+  const [quickCondition, setQuickCondition] = useState('')
+  const [updatingCondition, setUpdatingCondition] = useState(false)
 
   async function loadAll() {
     setLoading(true)
@@ -34,6 +39,7 @@ export default function AssetDetails() {
     setIssues(issueData || [])
     setHistory(historyData || [])
     setTechnicians(techData || [])
+    setQuickCondition(assetData?.condition || 'Good')
     setLoading(false)
   }
 
@@ -74,6 +80,40 @@ export default function AssetDetails() {
     loadAll()
   }
 
+  async function handleQuickConditionUpdate() {
+    setUpdatingCondition(true)
+    const { error } = await supabase.from('assets').update({ condition: quickCondition }).eq('id', id)
+    if (!error) {
+      await supabase.from('asset_history').insert({
+        asset_id: id,
+        action: `Condition updated to ${quickCondition}`,
+        actor_id: user?.id,
+      })
+      loadAll()
+    }
+    setUpdatingCondition(false)
+  }
+
+  async function handleQuickResolve(issueId) {
+    if (!confirm('Mark this issue as fixed?')) return
+    // First insert a quick maintenance record so the DB trigger doesn't fail
+    await supabase.from('maintenance_records').insert({
+      issue_id: issueId,
+      technician_id: user?.id,
+      work_performed: 'Quick fix applied from Asset Details page.',
+      final_condition: 'Fixed',
+      time_spent_minutes: 0,
+    })
+    
+    // Then update the issue status to Resolved
+    await supabase.from('issues').update({ status: 'Resolved' }).eq('id', issueId)
+    
+    // Also update asset status and condition
+    await supabase.from('assets').update({ status: 'Operational', condition: 'Fixed' }).eq('id', id)
+    
+    loadAll()
+  }
+
   if (loading || !asset) {
     return (
       <div className="min-h-screen bg-base">
@@ -84,15 +124,29 @@ export default function AssetDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-base">
+    <PageWrapper>
       <Navbar />
       <main className="mx-auto max-w-6xl px-4 py-8">
         <Link to="/assets" className="text-sm text-steel-500 hover:text-signal-teal">← Back to assets</Link>
 
-        <div className="mt-3 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <motion.div 
+          className="mt-3 grid grid-cols-1 gap-6 lg:grid-cols-3"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: { staggerChildren: 0.1 }
+            }
+          }}
+        >
           {/* Left column: details */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="card p-5">
+            <motion.div 
+              className="card p-5"
+              variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+            >
               <div className="flex items-start justify-between">
                 <div>
                   <h1 className="font-display text-xl font-semibold text-ink">{asset.name}</h1>
@@ -134,10 +188,39 @@ export default function AssetDetails() {
                   </div>
                 </form>
               )}
-            </div>
+            </motion.div>
+
+            {(!isAdmin && profile?.role === 'technician') && (
+              <motion.div 
+                className="card p-5"
+                variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+              >
+                <h3 className="font-display text-sm font-semibold text-ink">Update Condition</h3>
+                <p className="mt-1 text-xs text-steel-500">Quickly log the current condition of this asset.</p>
+                <div className="mt-3 flex gap-2">
+                  <select 
+                    className="input flex-1" 
+                    value={quickCondition} 
+                    onChange={(e) => setQuickCondition(e.target.value)}
+                  >
+                    {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <button 
+                    className="btn-primary" 
+                    onClick={handleQuickConditionUpdate}
+                    disabled={updatingCondition || quickCondition === asset.condition}
+                  >
+                    {updatingCondition ? 'Saving…' : 'Update'}
+                  </button>
+                </div>
+              </motion.div>
+            )}
 
             {isAdmin && (
-              <div className="card p-5">
+              <motion.div 
+                className="card p-5"
+                variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+              >
                 <h3 className="font-display text-sm font-semibold text-ink">Assigned technician</h3>
                 <select
                   className="input mt-2"
@@ -149,32 +232,50 @@ export default function AssetDetails() {
                     <option key={t.id} value={t.id}>{t.full_name || t.email}</option>
                   ))}
                 </select>
-              </div>
+              </motion.div>
             )}
 
-            <div className="card p-5">
+            <motion.div 
+              className="card p-5"
+              variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+            >
               <h3 className="font-display text-sm font-semibold text-ink">Issues for this asset</h3>
               {issues.length === 0 ? (
                 <p className="mt-2 text-sm text-steel-500">No issues reported yet.</p>
               ) : (
                 <ul className="mt-3 divide-y divide-steel-50">
                   {issues.map((issue) => (
-                    <li key={issue.id} className="flex items-center justify-between py-2">
-                      <Link to={`/issues/${issue.id}`} className="text-sm font-medium text-ink hover:text-signal-teal">
-                        {issue.title}
-                        <span className="tag-mono ml-2 text-steel-500">{issue.issue_number}</span>
-                      </Link>
-                      <div className="flex items-center gap-3">
-                        <PriorityBadge priority={issue.priority} />
-                        <StatusBadge status={issue.status} kind="issue" />
+                    <li key={issue.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-3">
+                      <div className="flex-1">
+                        <Link to={`/issues/${issue.id}`} className="text-sm font-medium text-ink hover:text-signal-teal">
+                          {issue.title}
+                          <span className="tag-mono ml-2 text-steel-500">{issue.issue_number}</span>
+                        </Link>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <PriorityBadge priority={issue.priority} />
+                          <StatusBadge status={issue.status} kind="issue" />
+                        </div>
                       </div>
+                      
+                      {/* Quick resolve action for open issues */}
+                      {(isAdmin || profile?.role === 'technician') && !['Resolved', 'Closed'].includes(issue.status) && (
+                        <button 
+                          onClick={() => handleQuickResolve(issue.id)}
+                          className="btn-outline text-xs px-3 py-1 whitespace-nowrap"
+                        >
+                          Mark Fixed
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
               )}
-            </div>
+            </motion.div>
 
-            <div className="card p-5">
+            <motion.div 
+              className="card p-5"
+              variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+            >
               <h3 className="font-display text-sm font-semibold text-ink">Asset history</h3>
               {history.length === 0 ? (
                 <p className="mt-2 text-sm text-steel-500">No activity recorded yet.</p>
@@ -190,15 +291,15 @@ export default function AssetDetails() {
                   ))}
                 </ol>
               )}
-            </div>
+            </motion.div>
           </div>
 
           {/* Right column: QR */}
-          <div>
+          <motion.div variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}>
             <QRBlock asset={asset} />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </main>
-    </div>
+    </PageWrapper>
   )
 }

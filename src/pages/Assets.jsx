@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Plus, Search, X } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext.jsx'
 import Navbar from '../components/Navbar.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
+import PageWrapper from '../components/PageWrapper.jsx'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const STATUSES = ['Operational', 'Issue Reported', 'Under Inspection', 'Under Maintenance', 'Out of Service', 'Retired']
 
@@ -21,6 +23,13 @@ export default function Assets() {
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
+  const location = useLocation()
+
+  useEffect(() => {
+    if (location.search.includes('add=true') && isAdmin) {
+      setShowForm(true)
+    }
+  }, [location, isAdmin])
 
   async function loadAssets() {
     setLoading(true)
@@ -79,7 +88,7 @@ export default function Assets() {
   }
 
   return (
-    <div className="min-h-screen bg-base">
+    <PageWrapper>
       <Navbar />
       <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -95,8 +104,15 @@ export default function Assets() {
           )}
         </div>
 
-        {showForm && (
-          <form onSubmit={handleCreate} className="card mt-4 grid grid-cols-1 gap-4 p-5 md:grid-cols-3">
+        <AnimatePresence>
+          {showForm && (
+            <motion.form 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="card mt-4 grid grid-cols-1 gap-4 p-5 md:grid-cols-3 overflow-hidden"
+              onSubmit={handleCreate}
+            >
             {formError && (
               <p className="col-span-full rounded-tag border border-red-100 bg-red-50 px-3 py-2 text-sm text-signal-rust">
                 {formError}
@@ -162,8 +178,9 @@ export default function Assets() {
                 {saving ? 'Saving…' : 'Save asset'}
               </button>
             </div>
-          </form>
+          </motion.form>
         )}
+        </AnimatePresence>
 
         <div className="mt-6 flex flex-wrap gap-3">
           <div className="relative min-w-[220px] flex-1">
@@ -195,28 +212,48 @@ export default function Assets() {
           ) : filtered.length === 0 ? (
             <p className="text-sm text-steel-500">No assets match your filters.</p>
           ) : (
-            filtered.map((asset) => (
-              <Link
-                key={asset.id}
-                to={`/assets/${asset.id}`}
-                className="card block p-4 transition-shadow hover:shadow-md"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-medium text-ink">{asset.name}</p>
-                    <p className="tag-mono text-steel-500">{asset.asset_code}</p>
-                  </div>
-                  <StatusBadge status={asset.status} kind="asset" />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-steel-500">
-                  {asset.category && <span>{asset.category}</span>}
-                  {asset.location && <span>{asset.location}</span>}
-                </div>
-              </Link>
-            ))
+            <motion.div 
+              className="col-span-full grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: {
+                  opacity: 1,
+                  transition: { staggerChildren: 0.05 }
+                }
+              }}
+            >
+              {filtered.map((asset) => (
+                <motion.div
+                  key={asset.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    visible: { opacity: 1, y: 0 }
+                  }}
+                >
+                  <Link
+                    to={`/assets/${asset.id}`}
+                    className="card block p-4 hover:shadow-lg transition-shadow duration-300 hover:-translate-y-1 h-full"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-ink">{asset.name}</p>
+                        <p className="tag-mono text-steel-500">{asset.asset_code}</p>
+                      </div>
+                      <StatusBadge status={asset.status} kind="asset" />
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-steel-500">
+                      {asset.category && <span>{asset.category}</span>}
+                      {asset.location && <span>{asset.location}</span>}
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
           )}
         </div>
       </main>
-    </div>
+    </PageWrapper>
   )
 }

@@ -3,9 +3,14 @@ import { useParams, Link } from 'react-router-dom'
 import { Wrench, MapPin, Tag } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import StatusBadge from '../components/StatusBadge.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 
 export default function PublicAsset() {
   const { code } = useParams()
+const { profile } = useAuth()
+
+const isTechnician = profile?.role === 'technician'
+
   const [asset, setAsset] = useState(null)
   const [recentActivity, setRecentActivity] = useState([])
   const [notFound, setNotFound] = useState(false)
@@ -96,11 +101,23 @@ export default function PublicAsset() {
             </div>
           </dl>
 
-          {!isRetired && (
-            <Link to={`/report/${asset.asset_code}`} className="btn-primary mt-5 w-full">
-              Report an issue
-            </Link>
-          )}
+{!isRetired && (
+  isTechnician ? (
+    <Link
+      to={`/assets/${asset.id}`}
+      className="btn-primary mt-5 w-full"
+    >
+      Update the Issue
+    </Link>
+  ) : (
+    <Link
+      to={`/report/${asset.asset_code}`}
+      className="btn-primary mt-5 w-full"
+    >
+      Report an Issue
+    </Link>
+  )
+)}
         </div>
 
         {recentActivity.length > 0 && (

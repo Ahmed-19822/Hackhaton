@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext.jsx'
 import Navbar from '../components/Navbar.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
 import PriorityBadge from '../components/PriorityBadge.jsx'
+import PageWrapper from '../components/PageWrapper.jsx'
+import { motion } from 'framer-motion'
 
 const NEXT_STATUS = {
   Reported: ['Assigned'],
@@ -110,7 +112,7 @@ export default function IssueDetails() {
   const ai = issue.ai_suggested_json
 
   return (
-    <div className="min-h-screen bg-base">
+    <PageWrapper>
       <Navbar />
       <main className="mx-auto max-w-4xl px-4 py-8">
         {asset && (
@@ -119,7 +121,21 @@ export default function IssueDetails() {
           </Link>
         )}
 
-        <div className="card mt-3 p-5">
+        <motion.div 
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: { staggerChildren: 0.1 }
+            }
+          }}
+        >
+          <motion.div 
+            className="card mt-3 p-5"
+            variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+          >
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="tag-mono text-steel-500">{issue.issue_number}</p>
@@ -139,10 +155,13 @@ export default function IssueDetails() {
             <div><dt className="label">Reported</dt><dd className="text-ink">{new Date(issue.created_at).toLocaleString()}</dd></div>
             <div><dt className="label">Last updated</dt><dd className="text-ink">{new Date(issue.updated_at).toLocaleString()}</dd></div>
           </dl>
-        </div>
+        </motion.div>
 
         {ai && (
-          <div className="card mt-4 border-l-4 border-l-signal-teal p-5">
+          <motion.div 
+            className="card mt-4 border-l-4 border-l-signal-teal p-5"
+            variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+          >
             <h3 className="font-display text-sm font-semibold text-ink">AI Issue Triage suggestion</h3>
             <p className="mt-1 text-xs text-steel-500">
               {issue.ai_was_edited ? 'Reviewed and edited by reporter before submission.' : 'Submitted as suggested.'}
@@ -157,15 +176,23 @@ export default function IssueDetails() {
                 </div>
               )}
             </dl>
-          </div>
+          </motion.div>
         )}
 
         {error && (
-          <p className="mt-4 rounded-tag border border-red-100 bg-red-50 px-3 py-2 text-sm text-signal-rust">{error}</p>
+          <motion.p 
+            className="mt-4 rounded-tag border border-red-100 bg-red-50 px-3 py-2 text-sm text-signal-rust"
+            variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+          >
+            {error}
+          </motion.p>
         )}
 
         {isAdmin && (
-          <div className="card mt-4 p-5">
+          <motion.div 
+            className="card mt-4 p-5"
+            variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+          >
             <h3 className="font-display text-sm font-semibold text-ink">Assign technician</h3>
             <select
               className="input mt-2"
@@ -177,12 +204,21 @@ export default function IssueDetails() {
                 <option key={t.id} value={t.id}>{t.full_name || t.email}</option>
               ))}
             </select>
-          </div>
+          </motion.div>
         )}
 
         {canAct && nextOptions.length > 0 && (
-          <div className="card mt-4 p-5">
-            <h3 className="font-display text-sm font-semibold text-ink">Update status</h3>
+          <motion.div 
+            className="card mt-4 p-5"
+            variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+          >
+           <h3 className="font-display text-sm font-semibold text-ink">
+  Technician Update
+</h3>
+
+<p className="mt-1 text-sm text-steel-500">
+  Update the problem status and maintenance progress.
+</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {nextOptions.map((s) => (
                 <button key={s} className="btn-outline" onClick={() => changeStatus(s)}>
@@ -195,11 +231,15 @@ export default function IssueDetails() {
                 Add at least one maintenance record below before resolving.
               </p>
             )}
-          </div>
+          </motion.div>
         )}
 
         {canAct && (
-          <form onSubmit={submitNote} className="card mt-4 space-y-3 p-5">
+          <motion.form 
+            onSubmit={submitNote} 
+            className="card mt-4 space-y-3 p-5"
+            variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+          >
             <h3 className="font-display text-sm font-semibold text-ink">Add maintenance record</h3>
             <div>
               <label className="label">Inspection notes</label>
@@ -216,10 +256,13 @@ export default function IssueDetails() {
               <div><label className="label">Time spent (minutes)</label><input type="number" min="0" className="input" value={note.time_spent_minutes} onChange={(e) => setNote({ ...note, time_spent_minutes: e.target.value })} /></div>
             </div>
             <button className="btn-primary" disabled={savingNote}>{savingNote ? 'Saving…' : 'Save record'}</button>
-          </form>
+          </motion.form>
         )}
 
-        <div className="card mt-4 p-5">
+        <motion.div 
+          className="card mt-4 p-5"
+          variants={{ hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } }}
+        >
           <h3 className="font-display text-sm font-semibold text-ink">Maintenance history</h3>
           {records.length === 0 ? (
             <p className="mt-2 text-sm text-steel-500">No maintenance recorded yet.</p>
@@ -240,8 +283,9 @@ export default function IssueDetails() {
               ))}
             </ul>
           )}
-        </div>
+        </motion.div>
+        </motion.div>
       </main>
-    </div>
+    </PageWrapper>
   )
 }

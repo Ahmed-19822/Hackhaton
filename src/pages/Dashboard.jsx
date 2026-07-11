@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, Wrench, Clock } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Wrench, Clock, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import Navbar from '../components/Navbar.jsx'
 import StatusBadge from '../components/StatusBadge.jsx'
 import PriorityBadge from '../components/PriorityBadge.jsx'
+import PageWrapper from '../components/PageWrapper.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
+import { motion } from 'framer-motion'
 
 export default function Dashboard() {
+  const { isAdmin } = useAuth()
   const [assets, setAssets] = useState([])
   const [issues, setIssues] = useState([])
   const [loading, setLoading] = useState(true)
@@ -41,23 +45,51 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="min-h-screen bg-base">
+    <PageWrapper>
       <Navbar />
       <main className="mx-auto max-w-6xl px-4 py-8">
-        <h1 className="font-display text-2xl font-semibold text-ink">Operations overview</h1>
-        <p className="mt-1 text-sm text-steel-500">Live summary across all registered assets.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-ink">Operations overview</h1>
+            <p className="mt-1 text-sm text-steel-500">Live summary across all registered assets.</p>
+          </div>
+          {isAdmin && (
+            <Link to="/assets?add=true" className="btn-primary shadow-sm hover:shadow-md transition-shadow">
+              <Plus size={16} />
+              Add Asset
+            </Link>
+          )}
+        </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+        <motion.div 
+          className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: { staggerChildren: 0.1 }
+            }
+          }}
+        >
           {cards.map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="card p-4">
+            <motion.div 
+              key={label} 
+              className="card p-4 hover:shadow-lg transition-shadow duration-300 hover:-translate-y-1"
+              variants={{
+                hidden: { opacity: 0, y: 15 },
+                visible: { opacity: 1, y: 0 }
+              }}
+            >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium uppercase tracking-wide text-steel-500">{label}</span>
                 <Icon size={16} className={color} />
               </div>
               <p className="mt-2 font-mono text-2xl font-semibold text-ink">{loading ? '—' : value}</p>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         <div className="mt-8 flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold text-ink">Recent issues</h2>
@@ -107,6 +139,6 @@ export default function Dashboard() {
           )}
         </div>
       </main>
-    </div>
+    </PageWrapper>
   )
 }
